@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Lead Research Agent</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:'Segoe UI',sans-serif;background:#0f0f1a;color:#e0e0e0;min-height:100vh;}
+
+    header{background:linear-gradient(135deg,#1a1a2e,#16213e);padding:22px 40px;border-bottom:1px solid #2a2a4a;display:flex;align-items:center;gap:14px;}
+    header h1{font-size:21px;font-weight:700;color:#fff;}
+    header p{font-size:13px;color:#777;margin-top:2px;}
+
+    .container{max-width:1200px;margin:32px auto;padding:0 24px;}
+
+    /* STAGE INDICATOR */
+    .stages{display:flex;gap:0;margin-bottom:28px;border-radius:10px;overflow:hidden;border:1px solid #2a2a4a;}
+    .stage{flex:1;padding:14px 20px;text-align:center;font-size:13px;font-weight:600;color:#555;background:#1a1a2e;cursor:default;transition:all 0.3s;border-right:1px solid #2a2a4a;}
+    .stage:last-child{border-right:none;}
+    .stage.active{background:linear-gradient(135deg,#6c63ff22,#4ecdc422);color:#6c63ff;border-bottom:2px solid #6c63ff;}
+    .stage.done{color:#4ecdc4;}
+    .stage-num{display:inline-block;width:22px;height:22px;border-radius:50%;background:#2a2a4a;font-size:11px;line-height:22px;margin-right:8px;}
+    .stage.active .stage-num{background:#6c63ff;color:#fff;}
+    .stage.done .stage-num{background:#4ecdc4;color:#0f0f1a;}
+
+    .card{background:#1a1a2e;border:1px solid #2a2a4a;border-radius:14px;padding:26px;margin-bottom:24px;}
+    .card h2{font-size:14px;font-weight:600;color:#a0a0c0;text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;}
+
+    /* STAGE 1 */
+    .prompt-row{display:flex;gap:12px;}
+    .prompt-input{flex:1;background:#0f0f1a;border:1px solid #2a2a4a;border-radius:10px;color:#e0e0e0;font-size:14px;padding:14px 16px;outline:none;font-family:'Segoe UI',sans-serif;}
+    .prompt-input:focus{border-color:#6c63ff;}
+    .btn{padding:13px 24px;background:linear-gradient(135deg,#6c63ff,#4ecdc4);border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:600;cursor:pointer;transition:opacity 0.2s;white-space:nowrap;}
+    .btn:hover{opacity:0.88;}
+    .btn:disabled{opacity:0.45;cursor:not-allowed;}
+    .btn-outline{background:transparent;border:1px solid #6c63ff;color:#6c63ff;}
+    .btn-outline:hover{background:#6c63ff22;opacity:1;}
+    .btn-green{background:linear-gradient(135deg,#4ecdc4,#2ecc71);}
+
+    .suggestions-wrap{margin-top:20px;display:none;}
+    .suggestions-title{font-size:15px;font-weight:600;color:#fff;margin-bottom:4px;}
+    .suggestions-reason{font-size:13px;color:#777;margin-bottom:16px;}
+
+    .company-list{display:flex;flex-direction:column;gap:10px;}
+    .company-item{display:flex;align-items:center;gap:12px;background:#0f0f1a;border:1px solid #2a2a4a;border-radius:10px;padding:12px 16px;transition:border-color 0.2s;}
+    .company-item.selected{border-color:#6c63ff;background:#6c63ff0a;}
+    .company-item input[type=checkbox]{width:17px;height:17px;accent-color:#6c63ff;cursor:pointer;flex-shrink:0;}
+    .company-item .name{font-size:14px;font-weight:600;color:#e0e0e0;flex:1;}
+    .company-item .why{font-size:12px;color:#666;margin-top:2px;}
+    .company-item label{cursor:pointer;flex:1;}
+
+    .action-row{display:flex;gap:12px;margin-top:20px;align-items:center;}
+    .select-all{font-size:13px;color:#6c63ff;cursor:pointer;text-decoration:underline;}
+
+    /* STAGE 2 progress */
+    .progress-wrap{display:none;margin-top:16px;}
+    .progress-label{font-size:13px;color:#888;margin-bottom:8px;display:flex;justify-content:space-between;}
+    .progress-bar-bg{background:#0f0f1a;border-radius:999px;height:8px;overflow:hidden;}
+    .progress-bar-fill{height:100%;background:linear-gradient(90deg,#6c63ff,#4ecdc4);border-radius:999px;transition:width 0.4s;width:0%;}
+    .current-status{font-size:12px;color:#6c63ff;margin-top:8px;min-height:18px;}
+
+    /* Results table */
+    .results-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}
+    .download-btn{padding:9px 22px;background:#4ecdc4;border:none;border-radius:8px;color:#0f0f1a;font-weight:700;font-size:13px;cursor:pointer;display:none;}
+    .download-btn:hover{background:#3dbdb5;}
+    .table-wrap{overflow-x:auto;border-radius:10px;border:1px solid #2a2a4a;}
+    table{width:100%;border-collapse:collapse;font-size:13px;}
+    thead tr{background:#16213e;}
+    th{padding:12px 14px;text-align:left;color:#a0a0c0;font-weight:600;white-space:nowrap;border-bottom:1px solid #2a2a4a;}
+    td{padding:11px 14px;border-bottom:1px solid #1e1e35;vertical-align:top;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    tr:last-child td{border-bottom:none;}
+    tbody tr:hover{background:#1e1e35;}
+    td a{color:#6c63ff;text-decoration:none;}
+    td a:hover{text-decoration:underline;}
+    .badge{padding:3px 10px;border-radius:999px;font-size:11px;font-weight:600;background:#1e3a2e;color:#4ecdc4;}
+    .empty-state{text-align:center;padding:50px 20px;color:#444;}
+    .empty-state .icon{font-size:42px;margin-bottom:10px;}
+    .empty-state p{font-size:14px;}
+
+    .loader{display:inline-block;width:16px;height:16px;border:2px solid #ffffff44;border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite;margin-right:8px;vertical-align:middle;}
+    @keyframes spin{to{transform:rotate(360deg);}}
+
+    .tag{display:inline-block;background:#1e1e35;color:#6c63ff;font-size:11px;padding:3px 10px;border-radius:999px;margin-right:6px;margin-bottom:4px;cursor:pointer;border:1px solid #6c63ff44;}
+    .tag:hover{background:#6c63ff22;}
+  </style>
+</head>
+<body>
+
+<header>
+  <div style="font-size:26px;">🔍</div>
+  <div>
+    <h1>Lead Research Agent</h1>
+    <p>Describe what you need → AI suggests companies → You approve → Agent researches all details</p>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- STAGE INDICATOR -->
+  <div class="stages">
+    <div class="stage active" id="stageTab1"><span class="stage-num">1</span>Describe & Get Suggestions</div>
+    <div class="stage" id="stageTab2"><span class="stage-num">2</span>Review & Select</div>
+    <div class="stage" id="stageTab3"><span class="stage-num">3</span>Research & Export</div>
+  </div>
+
+  <!-- STAGE 1: Prompt -->
+  <div class="card" id="stage1">
+    <h2>💬 What companies are you looking for?</h2>
+    <div class="prompt-row">
+      <input class="prompt-input" id="promptInput" type="text"
+        placeholder="e.g. packaging suppliers for plastic and glass bottles in India"/>
+      <button class="btn" id="suggestBtn" onclick="getSuggestions()">✨ Suggest Companies</button>
+    </div>
+
+    <!-- Quick prompts -->
+    <div style="margin-top:14px;">
+      <span style="font-size:12px;color:#555;margin-right:8px;">Quick:</span>
+      <span class="tag" onclick="quickPrompt('plastic and glass bottle packaging suppliers India')">Packaging Suppliers</span>
+      <span class="tag" onclick="quickPrompt('pharma raw material suppliers India')">Raw Material Suppliers</span>
+      <span class="tag" onclick="quickPrompt('health supplement distributors India')">Distributors</span>
+      <span class="tag" onclick="quickPrompt('corporate wellness program clients India')">Corporate Clients</span>
+      <span class="tag" onclick="quickPrompt('online pharmacy platforms India')">Online Pharmacies</span>
+    </div>
+
+    <!-- Suggestions appear here -->
+    <div class="suggestions-wrap" id="suggestionsWrap">
+      <div class="suggestions-title" id="suggestionsTitle"></div>
+      <div class="suggestions-reason" id="suggestionsReason"></div>
+      <div class="company-list" id="companyList"></div>
+      <div class="action-row">
+        <span class="select-all" onclick="selectAll()">Select All</span>
+        <span class="select-all" onclick="selectNone()" style="margin-left:12px;">Deselect All</span>
+        <div style="flex:1;"></div>
+        <button class="btn btn-green" onclick="startResearch()">🚀 Research Selected Companies</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STAGE 3: Progress + Results -->
+  <div class="card" id="stage3Card" style="display:none;">
+    <div class="results-header">
+      <h2>📊 Research Results</h2>
+      <button class="download-btn" id="downloadBtn">⬇ Download Excel</button>
+    </div>
+
+    <div class="progress-wrap" id="progressWrap">
+      <div class="progress-label">
+        <span id="progressText">Starting...</span>
+        <span id="progressPct">0%</span>
+      </div>
+      <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill"></div></div>
+      <div class="current-status" id="currentStatus"></div>
+    </div>
+
+    <div id="resultsArea" style="margin-top:20px;">
+      <div class="empty-state"><div class="icon">🤖</div><p>Agent is working...</p></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  let sessionId = null;
+  let pollInterval = null;
+  let suggestedCompanies = [];
+
+  function quickPrompt(text) {
+    document.getElementById("promptInput").value = text;
+    getSuggestions();
+  }
+
+  async function getSuggestions() {
+    const prompt = document.getElementById("promptInput").value.trim();
+    if (!prompt) { alert("Please describe what companies you're looking for."); return; }
+
+    const btn = document.getElementById("suggestBtn");
+    btn.disabled = true;
+    btn.innerHTML = '<span class="loader"></span>Thinking...';
+
+    const res  = await fetch("/suggest", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({prompt})
+    });
+    const data = await res.json();
+
+    btn.disabled = false;
+    btn.textContent = "✨ Suggest Companies";
+
+    suggestedCompanies = data.companies || [];
+
+    document.getElementById("suggestionsTitle").textContent = data.title || "Suggested Companies";
+    document.getElementById("suggestionsReason").textContent = data.reason || "";
+
+    const list = document.getElementById("companyList");
+    list.innerHTML = "";
+    suggestedCompanies.forEach((c, i) => {
+      list.innerHTML += `
+        <div class="company-item selected" id="item_${i}">
+          <input type="checkbox" id="chk_${i}" checked onchange="toggleItem(${i})"/>
+          <label for="chk_${i}">
+            <div class="name">${c.name}</div>
+            <div class="why">${c.reason}</div>
+          </label>
+        </div>`;
+    });
+
+    document.getElementById("suggestionsWrap").style.display = "block";
+    setStage(2);
+  }
+
+  function toggleItem(i) {
+    const item = document.getElementById(`item_${i}`);
+    const chk  = document.getElementById(`chk_${i}`);
+    item.classList.toggle("selected", chk.checked);
+  }
+
+  function selectAll() {
+    suggestedCompanies.forEach((_, i) => {
+      document.getElementById(`chk_${i}`).checked = true;
+      document.getElementById(`item_${i}`).classList.add("selected");
+    });
+  }
+
+  function selectNone() {
+    suggestedCompanies.forEach((_, i) => {
+      document.getElementById(`chk_${i}`).checked = false;
+      document.getElementById(`item_${i}`).classList.remove("selected");
+    });
+  }
+
+  async function startResearch() {
+    const selected = suggestedCompanies
+      .filter((_, i) => document.getElementById(`chk_${i}`).checked)
+      .map(c => c.name);
+
+    if (selected.length === 0) { alert("Please select at least one company."); return; }
+
+    document.getElementById("stage3Card").style.display = "block";
+    document.getElementById("progressWrap").style.display = "block";
+    document.getElementById("downloadBtn").style.display = "none";
+    document.getElementById("resultsArea").innerHTML = `<div class="empty-state"><div class="icon">🤖</div><p>Agent is researching ${selected.length} companies...</p></div>`;
+    setStage(3);
+
+    const res  = await fetch("/research", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({companies: selected})
+    });
+    const data = await res.json();
+    sessionId  = data.session_id;
+
+    pollInterval = setInterval(pollStatus, 2500);
+    document.getElementById("stage3Card").scrollIntoView({behavior: "smooth"});
+  }
+
+  async function pollStatus() {
+    if (!sessionId) return;
+    const res  = await fetch(`/status/${sessionId}`);
+    const data = await res.json();
+
+    const total = data.total || 1;
+    const done  = (data.results || []).length;
+    const pct   = Math.round((done / total) * 100);
+
+    document.getElementById("progressFill").style.width = pct + "%";
+    document.getElementById("progressPct").textContent  = pct + "%";
+    document.getElementById("progressText").textContent = `${done} of ${total} companies researched`;
+    document.getElementById("currentStatus").textContent = data.current || "";
+
+    if (data.results && data.results.length > 0) renderTable(data.results);
+
+    if (data.status === "done") {
+      clearInterval(pollInterval);
+      document.getElementById("progressFill").style.width   = "100%";
+      document.getElementById("progressPct").textContent    = "100%";
+      document.getElementById("currentStatus").textContent  = "✅ All done!";
+      const dlBtn = document.getElementById("downloadBtn");
+      dlBtn.style.display = "inline-block";
+      dlBtn.onclick = () => window.location.href = `/download/${sessionId}`;
+    }
+  }
+
+  function renderTable(leads) {
+    const cols  = ["company","website","ceo_name","email","linkedin","industry","company_size","summary"];
+    const heads = ["Company","Website","CEO / Founder","Email","LinkedIn","Industry","Size","Summary"];
+    let html = `<div class="table-wrap"><table><thead><tr>`;
+    heads.forEach(h => html += `<th>${h}</th>`);
+    html += `</tr></thead><tbody>`;
+    leads.forEach(lead => {
+      html += `<tr>`;
+      cols.forEach(col => {
+        let val = lead[col] || "—";
+        if ((col === "website" || col === "linkedin") && val.startsWith("http"))
+          val = `<a href="${val}" target="_blank">${val.replace("https://","")}</a>`;
+        if (col === "industry" && val !== "—")
+          val = `<span class="badge">${val}</span>`;
+        html += `<td title="${lead[col] || ''}">${val}</td>`;
+      });
+      html += `</tr>`;
+    });
+    html += `</tbody></table></div>`;
+    document.getElementById("resultsArea").innerHTML = html;
+  }
+
+  function setStage(n) {
+    [1,2,3].forEach(i => {
+      const el = document.getElementById(`stageTab${i}`);
+      el.classList.remove("active","done");
+      if (i < n) el.classList.add("done");
+      if (i === n) el.classList.add("active");
+    });
+  }
+</script>
+</body>
+</html>
